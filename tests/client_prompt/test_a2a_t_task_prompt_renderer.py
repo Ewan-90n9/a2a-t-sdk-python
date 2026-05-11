@@ -35,15 +35,14 @@ class A2ATTaskPromptRendererTest(unittest.TestCase):
 
         renderer = TaskPromptRenderer()
         prompt_text = renderer.render(
-            template_text="通知主题：{{通知主题}}\n订阅条件：{{订阅条件}}",
-            slots={"通知主题": "Incident", "订阅条件": "严重告警"},
+            template_text="Topic: {{topic}}\nCondition: {{condition}}",
+            slots={"topic": "Incident", "condition": "critical alert"},
             scenario_code="subscribe_incident",
             language="zh-CN",
-            version="0.0.1",
-            description="用于订阅故障事件。",
+            description="Used for incident subscription prompts.",
         )
 
-        self.assertEqual(prompt_text, "通知主题：Incident\n订阅条件：严重告警")
+        self.assertEqual(prompt_text, "Topic: Incident\nCondition: critical alert")
 
     def test_render_raises_when_template_references_unknown_slot(self) -> None:
         from a2a_t.prompt.task_rendering import TaskPromptRenderError
