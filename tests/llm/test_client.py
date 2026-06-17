@@ -648,7 +648,7 @@ class LLMClientTest(ManagedTempDirTestCase):
         with self.assertRaises(LLMConfigError):
             LLMClient(env_path=env_path)
 
-    def test_missing_api_key_raises_config_error_on_invocation(self) -> None:
+    def test_missing_api_key_raises_config_error_on_init(self) -> None:
         env_path = self._write_env(
             "\n".join(
                 [
@@ -661,11 +661,10 @@ class LLMClientTest(ManagedTempDirTestCase):
 
         from a2a_t.llm.client import LLMClient
 
-        client = LLMClient(env_path=env_path)
         with self.assertRaises(LLMConfigError):
-            client.complete("hello")
+            LLMClient(env_path=env_path)
 
-    def test_whitespace_only_api_key_is_treated_as_missing(self) -> None:
+    def test_whitespace_only_api_key_is_rejected_on_init(self) -> None:
         env_path = self._write_env(
             "\n".join(
                 [
@@ -679,9 +678,8 @@ class LLMClientTest(ManagedTempDirTestCase):
 
         from a2a_t.llm.client import LLMClient
 
-        client = LLMClient(env_path=env_path)
         with self.assertRaises(LLMConfigError):
-            client.complete("hello")
+            LLMClient(env_path=env_path)
 
     def test_runtime_api_key_override_whitespace_is_rejected(self) -> None:
         env_path = self._write_env(

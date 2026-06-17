@@ -3,26 +3,23 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from a2a_t.config.errors import ConfigFileNotFoundError
-from a2a_t.config.source import DotEnvConfigSource
+from a2a_t.llm.config_loader import LLMConfigLoader, coerce_bounded_int, default_env_path
 from a2a_t.llm.errors import LLMConfigError, LLMRuntimeError
 from a2a_t.llm.factory import LLMAdapterFactory
 from a2a_t.llm.models import LLMClientConfig, LLMResponse
 from a2a_t.llm.session_store import InMemorySessionStore, ProviderScopedSessionStore
 
-_MAX_HISTORY_WINDOW = 100
-_MAX_SESSION_MAX_TOTAL = 3000
-_MAX_SESSION_MAX_PER_PROVIDER = 1000
 _DEFAULT_SESSION_STORE: InMemorySessionStore | None = None
 _DEFAULT_SESSION_STORE_LIMITS: tuple[int, int] | None = None
 
 
 def _default_env_path() -> Path:
     """Return the default .env path used by the shared LLM client."""
-    return Path(__file__).resolve().parents[3] / "package_data" / ".env"
+    return default_env_path()
 
 
 def _get_or_create_default_session_store(*, max_total: int, max_per_provider: int) -> InMemorySessionStore:
@@ -54,26 +51,6 @@ def _reset_default_session_store_for_tests() -> None:
 
     _DEFAULT_SESSION_STORE = None
     _DEFAULT_SESSION_STORE_LIMITS = None
-
-
-def _coerce_optional_int(value: str | None, key: str) -> int | None:
-    """Parse an optional integer environment value."""
-    if value is None or value == "":
-        return None
-    try:
-        return int(value)
-    except ValueError as exc:
-        raise LLMConfigError(f"{key} must be an integer") from exc
-
-
-def _coerce_optional_float(value: str | None, key: str) -> float | None:
-    """Parse an optional float environment value."""
-    if value is None or value == "":
-        return None
-    try:
-        return float(value)
-    except ValueError as exc:
-        raise LLMConfigError(f"{key} must be a float") from exc
 
 
 class LLMClient:
@@ -252,10 +229,10 @@ class LLMClient:
             raise LLMConfigError("LLM client requires provider and model")
 
         history_window_value = history_window if history_window is not None else self._defaults.history_window
-        resolved_history_window = self._coerce_bounded_int(
+        resolved_history_window = coerce_bounded_int(
             history_window_value,
             "history_window",
-            max_value=_MAX_HISTORY_WINDOW,
+            max_value=100,
         )
 
         resolved_api_key = self._defaults.api_key if api_key is None else str(api_key).strip()
@@ -281,49 +258,8 @@ class LLMClient:
 
     def _load_defaults(self, env_path: Path) -> LLMClientConfig:
         """Load and validate default LLM settings from the configured .env file."""
-        try:
-            values = DotEnvConfigSource.load(env_path)
-        except ConfigFileNotFoundError as exc:
-            raise LLMConfigError(f"LLM config file does not exist: {env_path}") from exc
-
-        provider = self._normalize_provider(values.get("A2AT_LLM_PROVIDER", ""))
-        model = str(values.get("A2AT_LLM_MODEL", "")).strip()
-        if not provider or not model:
-            raise LLMConfigError("A2AT_LLM_PROVIDER and A2AT_LLM_MODEL must be set in the .env file")
-
-        history_window = self._coerce_bounded_int(
-            values.get("A2AT_LLM_HISTORY_WINDOW", "10"),
-            "A2AT_LLM_HISTORY_WINDOW",
-            max_value=_MAX_HISTORY_WINDOW,
-        )
-        session_max_total = self._coerce_bounded_int(
-            values.get("A2AT_LLM_SESSION_MAX_TOTAL", "300"),
-            "A2AT_LLM_SESSION_MAX_TOTAL",
-            max_value=_MAX_SESSION_MAX_TOTAL,
-        )
-        session_max_per_provider = self._coerce_bounded_int(
-            values.get("A2AT_LLM_SESSION_MAX_PER_PROVIDER", "100"),
-            "A2AT_LLM_SESSION_MAX_PER_PROVIDER",
-            max_value=_MAX_SESSION_MAX_PER_PROVIDER,
-        )
-        if session_max_total < session_max_per_provider:
-            raise LLMConfigError(
-                "A2AT_LLM_SESSION_MAX_TOTAL must be greater than or equal to "
-                "A2AT_LLM_SESSION_MAX_PER_PROVIDER"
-            )
-
-        return LLMClientConfig(
-            provider=provider,
-            model=model,
-            api_key=str(values.get("A2AT_LLM_API_KEY", "")).strip(),
-            base_url=str(values.get("A2AT_LLM_BASE_URL", "")).strip() or None,
-            history_window=history_window,
-            max_tokens=_coerce_optional_int(values.get("A2AT_LLM_MAX_TOKENS"), "A2AT_LLM_MAX_TOKENS"),
-            temperature=_coerce_optional_float(values.get("A2AT_LLM_TEMPERATURE"), "A2AT_LLM_TEMPERATURE"),
-            timeout_seconds=_coerce_optional_float(values.get("A2AT_LLM_TIMEOUT_SECONDS"), "A2AT_LLM_TIMEOUT_SECONDS"),
-            session_max_total=session_max_total,
-            session_max_per_provider=session_max_per_provider,
-        )
+        config = LLMConfigLoader.load(env_path)
+        return replace(config, provider=self._normalize_provider(config.provider))
 
     def _normalize_provider(self, value: object) -> str:
         """Normalize a provider name and validate it against registered adapters."""
@@ -335,18 +271,6 @@ class LLMClient:
         if provider not in available:
             raise LLMConfigError(f"Unsupported llm provider: {provider}. Available: {sorted(available)}")
         return provider
-
-    def _coerce_bounded_int(self, value: int | str, key: str, *, max_value: int) -> int:
-        """Parse an integer config value and enforce a positive upper bound."""
-        try:
-            parsed = int(value)
-        except (TypeError, ValueError) as exc:
-            raise LLMConfigError(f"{key} must be an integer") from exc
-        if parsed <= 0:
-            raise LLMConfigError(f"{key} must be greater than zero")
-        if parsed > max_value:
-            raise LLMConfigError(f"{key} must be less than or equal to {max_value}")
-        return parsed
 
     def _log_request(self, *, method: str, runtime_config: dict[str, Any], payload: dict[str, Any]) -> None:
         """Emit a debug log for one outbound LLM request when logging is enabled."""
