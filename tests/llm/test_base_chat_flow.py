@@ -13,8 +13,8 @@ if str(SRC_ROOT) not in sys.path:
 
 from a2a_t.llm.base import LLMAdapter
 from a2a_t.llm.models import ChatMessage, LLMResponse
-from a2a_t.llm import InMemorySessionStore
 from a2a_t.llm.errors import LLMRuntimeError
+from a2a_t.llm.session_store import InMemorySessionStore
 
 
 class DummyAdapter(LLMAdapter):
