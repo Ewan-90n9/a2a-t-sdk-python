@@ -47,12 +47,12 @@ SPDX-License-Identifier: Apache-2.0
 
 ## 核心能力
 
-- 任务提示词生成链路：覆盖输入归一化、场景识别、槽位提取、槽位校验、任务提示词渲染。
+- 任务提示词生成链路：覆盖输入归一化、场景识别、槽位提取、任务提示词渲染。
 - 客户端 API：提供任务提示词生成结果流，以及 `start_negotiation`、`receive_negotiation`、`continue_negotiation` 等协商入口。
-- 服务端校验 API：面向符合 SDK 格式的 `processed task prompt`，执行元数据解析、槽位提取和槽位校验，并支持可选的 guardrail（防护）钩子。
+- 服务端校验 API：面向符合 SDK 格式的 `processed task prompt`，执行场景识别、槽位提取和槽位校验，并支持可选的 guardrail（防护）钩子。
 - 协商类型：内置 `information`、`clarification`、`feasibility`、`fulfillment` 四类协商类型。
 - 资源组织：内置提示词资源位于 `package_data/prompt_resources`，包含 `prompts`、`scenarios`、`slots`、`templates`。
-- 内置示例场景：当前随包仅提供 `subscribe_incident`。
+- 内置示例场景：当前随包提供 `subscribe_incident`等场景。
 
 ## 项目结构
 
@@ -80,8 +80,6 @@ SPDX-License-Identifier: Apache-2.0
 项目使用 `uv_build` 作为构建后端，开发依赖包括：
 
 - `pytest`
-- `pytest-asyncio`
-- `pytest-cov`
 - `ruff`
 - `mypy`
 
@@ -101,7 +99,6 @@ uv run mypy src
 使用前建议先确认以下限制：
 
 - 内置 LLM 调用链对外统一为 OpenAI-compatible 适配层。
-- 内置 guardrail 机制目前仅提供 `noop`。
 - 提示词资源目前仅支持本地文件。
 - 协商状态存储目前仅提供内存实现，不保证持久化。
 - 随包资源与语言覆盖有限，不包含 `registry`（注册中心）等远程资源加载能力。

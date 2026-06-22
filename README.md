@@ -47,12 +47,12 @@ This SDK is primarily aimed at two types of users:
 
 ## Core Capabilities
 
-- Task prompt generation pipeline: Covers input normalization, scenario recognition, slot extraction, slot validation, and task prompt rendering.
+- Task prompt generation pipeline: Covers input normalization, scenario recognition, slot extraction, and task prompt rendering.
 - Client API: Provides a task prompt generation result stream, along with negotiation entry points such as `start_negotiation`, `receive_negotiation`, and `continue_negotiation`.
-- Server validation API: Targets `processed task prompts` that conform to the SDK format, performing metadata parsing, slot extraction, and slot validation, with support for optional guardrail hooks.
+- Server validation API: Targets `processed task prompts` that conform to the SDK format, performing metadata parsing, slot extraction.
 - Negotiation types: Includes four built-in negotiation types: `information`, `clarification`, `feasibility`, and `fulfillment`.
 - Resource organization: Built-in prompt resources are located in `package_data/prompt_resources`, containing `prompts`, `scenarios`, `slots`, and `templates`.
-- Built-in example scenario: The current package only provides `subscribe_incident`.
+- Built-in example scenario: Currently, the package provides scenarios such as`subscribe_incident`.
 
 ## Project Structure
 
@@ -80,8 +80,6 @@ Before getting started, it is recommended to first copy `package_data/env.exampl
 The project uses `uv_build` as its build backend. Development dependencies include:
 
 - `pytest`
-- `pytest-asyncio`
-- `pytest-cov`
 - `ruff`
 - `mypy`
 
@@ -101,7 +99,6 @@ The `tests/` directory contains test cases for client prompt generation, server 
 Before use, it is recommended to confirm the following limitations:
 
 - The built-in LLM invocation chain is unified externally as an OpenAI-compatible adaptation layer.
-- The built-in guardrail mechanism currently only provides `noop`.
 - Prompt resources currently only support local files.
 - Negotiation state storage currently only provides an in-memory implementation and does not guarantee persistence.
 - The bundled resources and language coverage are limited, and do not include remote resource loading capabilities such as `registry`.
